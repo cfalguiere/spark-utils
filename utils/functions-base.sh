@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Do not remove
+# -- Do not remove
 [[ ${function_base_loaded:-false} == true ]] && return 0
 
 ###
@@ -15,7 +15,7 @@ set -Eeuo pipefail
 
 JOB_STATUS=-1
 
-trap "error_exit $LINENO ${FUNCNAME:-UNDEFINED}" SIGHUP SIGABRT SIGINT SIGQUIT SIGTERM ERR
+trap "error_exit ${FUNCNAME:-UNK} $LINENO ${BASH_COMMAND}" SIGHUP SIGABRT SIGINT SIGQUIT SIGTERM ERR
 trap "clean_exit" EXIT
 
 echo "INFO - sourcing function-base ..."
@@ -25,14 +25,20 @@ echo "INFO - sourcing function-base ..."
 ###
 
 function error_exit {
-  echo "ERROR - Error on line $1 in $2"
+  # -- show the error command location
+  echo "ERROR - Line $2 ($1) : $3"
 }
 
 function clean_exit {
+  # -- show the error location
   echo "INFO - cleanup on exit"
-  echo "INFO - Exiting with status=$JOB_STATUS"
+  echo "INFO - Exiting with status $JOB_STATUS"
 }
 
-# Do not remove
+###
+### -- end of functions' definition
+###
+
+# -- Do not remove
 echo "INFO - sourcing function-base Done"
 function_base_loaded=true
