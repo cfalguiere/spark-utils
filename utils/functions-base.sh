@@ -17,6 +17,7 @@
 # -- Global variables - always use camelCase
 # -- ---------------------
 # -- scriptDir : folder ot the main program
+# -- jobArgs : command line arguments
 # -- jobStatus : exit code
 # -- jobPID : PID of this script
 # -- verbosityLevel : actual verbosity parameter
@@ -32,6 +33,8 @@
 ###
 
 jobStatus=-1
+jobArgs=( "$@" ) # work around -set -u but - $* and  $@ not bound while they exist by default
+jobPID=$$
 
 set -Eeuo pipefail
 
@@ -58,10 +61,22 @@ function log_message {
 
 # -- header
 
-log_message INFO "Starting program $0"
-[[ $* -gt 0 ]] && log_message INFO "with parameters '$@'"
-log_message INFO "pid is '$$'"
-jobPID=$$
+function log_header {
+  log_message INFO "Starting program $0"
+  [[ ${#jobArgs[@]} -gt 0 ]] && {
+      log_message INFO "with parameters:"
+      local i=1
+      for arg in "${jobArgs[@]}"
+      do
+        log_message INFO "[$i]: $arg"
+        let i+=1
+      done
+  }
+
+  log_message INFO "pid is $jobPID"
+}
+
+log_header
 
 # -- traps
 
@@ -71,12 +86,19 @@ function error_exit {
   exit $jobStatus
 }
 
-function clean_exit {
-  # -- show the error location
+function cleanup {
   log_message INFO "cleanup on exit"
+  # TODO
+}
+
+function clean_exit {
+  cleanup
+
   [[ $jobStatus -eq 0 ]] && local  statusString="OK"
-  local msg=$(  awk -v code=0 'BEGIN { FS = ";" } ; $1 == code { print $2 }' utils/status-catalog.csv )
-  echo  "${statusString:-KO} - Exiting with status $jobStatus - ${msg:-UNDEFINED}"
+  local statusCatalogPath="config/status-catalog.csv"
+  [[ -f $statusCatalogPath ]] && local msg=$(  awk -v code=$jobStatus 'BEGIN { FS = ";" } ; $1 == code { print $2 }' $statusCatalogPath )  || log_message WARN "Message catalog was not found ar $statusCatalogPath"
+
+  echo  "${statusString:-KO} - Exiting with status $jobStatus - ${msg:-UNDEFINED_MESSAGE}"
   exit $jobStatus
 }
 
@@ -172,7 +194,39 @@ function configuration_load_from_file {
   log_message INFO "Loading Configuration map from $configurationPath DONE"
 }
 
+
+function configuration_load_from_cli {
+  # -- load the configuration from command line argument
+  # -- args : args of the program (jobArgs)
+  log_message DEBUG "configuration_load_from_cli: received: $( declare -p  jobArgs )"
+  local currentKey=""
+  for arg in "${jobArgs[@]}"
+  do
+    log_message DEBUG "configuration_load_from_cli: found $arg"
+    [[ $arg =~ ^-- ]] && {
+       local key=${arg:2}
+       log_message DEBUG "configuration_load_from_cli: arg $key is a key"
+       local actualKey="job.$key"
+       [[ -z currentKey ]] && currentKey=${actualKey} || {
+           log_message DEBUG "configuration_load_from_cli: adding $currentKey with no value"
+           configurationMap[$actualKey]=""
+           currentKey="${actualKey}"
+       }
+    } || {
+       log_message DEBUG "configuration_load_from_cli: arg $arg is a value"
+       [[ -z $currentKey ]] && {
+           job_report_error "configuration_load_from_cli: found arg $arg while no key is defined"
+       } || {
+          log_message DEBUG "configuration_load_from_cli: adding $currentKey with value $arg"
+          configurationMap[$currentKey]="$arg"
+          currentKey=""
+       }
+    }
+  done
+}
+
 function configuration_print_map {
+  # -- print out configurationMap
   local nbValues=${#configurationMap[@]}
   [[  $nbValues -eq 0 ]] && log_message INFO "configurationMap is empty" || {
     log_message INFO "Configuration map has $nbValues entries:"
