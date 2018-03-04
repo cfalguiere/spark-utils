@@ -15,11 +15,20 @@ source ${scriptDir}/utils/functions-spark-common.sh
 ### Main job
 ###
 
-log_message ERROR "test error"
-log_message WARN "test warn"
 log_message INFO "test info"
-log_message DEBUG "test debug"
-#log_message TRACE "test trace"
+
+job_report_error "ceci est une erreur"
+job_report_error "et une autre erreur"
+job_report_error
+
+job_print_errors
+log_message DEBUG "There are $( job_get_nb_errors ) errors"
+
+echo "ici"
+
+job_break_if_errors 12 "parameter checks"
+
+echo "la"
 
 ###
 ### End of Main Job
@@ -27,7 +36,7 @@ log_message DEBUG "test debug"
 
 # -- exit status
 jobStatus=0
-exit $jobStatus
+exit
 
 
 
