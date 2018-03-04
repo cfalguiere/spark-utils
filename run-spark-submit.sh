@@ -14,28 +14,24 @@ source ${scriptDir}/utils/functions-spark-common.sh
 ### Main job
 ###
 
-log_message INFO "before loading configuration"
+# -- loading configuration  from file
+configFilePath=config/job.properties
+configuration_load_from_file $configFilePath
+
+log_message INFO "loaded configuration"
 configuration_print_map
 
-log_message INFO " loading configuration"
-configuration_load_from_file config/job.properties
+# -- overriding configuration from cli
+configuration_load_from_cli
 
-log_message INFO "after loading configuration"
+log_message INFO "resulting configuration"
 configuration_print_map
 
-job_break_if_errors 11 "configuration checks"
+# -- asserting required configuration are present
+declare -a requiredConfigurationKeys=( "name" ) # Example
+configuration_assert_provided "$requiredConfigurationKeys"
+job_break_if_errors 21 "command line arguments"
 
-#log_message INFO "test info"
-
-#job_report_error "ceci est une erreur"
-#job_report_error "et une autre erreur"
-#job_report_error
-
-#job_print_errors
-
-job_break_if_errors 12 "parameter checks"
-
-#
 ###
 ### End of Main Job
 ###

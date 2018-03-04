@@ -206,7 +206,8 @@ function configuration_load_from_cli {
     [[ $arg =~ ^-- ]] && {
        local key=${arg:2}
        log_message DEBUG "configuration_load_from_cli: arg $key is a key"
-       local actualKey="job.$key"
+       #local actualKey="job.$key"
+       local actualKey="$key"
        [[ -z currentKey ]] && currentKey=${actualKey} || {
            log_message DEBUG "configuration_load_from_cli: adding $currentKey with no value"
            configurationMap[$actualKey]=""
@@ -233,6 +234,21 @@ function configuration_print_map {
     log_message INFO "$( declare -p  configurationMap )"
   }
   log_message DEBUG "end of table"
+  return 0
+}
+
+function configuration_assert_provided {
+  # -- check whether required parameters are provided
+  # -- arg1 : list of keys
+  local keys=( "$1" )
+  log_message DEBUG "configuration_assert_provided: received: $( declare -p  keys )"
+  for key in "${keys[@]}"
+  do
+       log_message DEBUG "configuration_assert_provided: looking for key $key"
+       local value="${configurationMap[$key]:-}"
+       log_message DEBUG "configuration_assert_provided: found ${value:-} for key $key"
+       [[ -z ${value:-} ]] &&  job_report_error "configuration_assert_provided: required configuration parameter $key is missing "
+  done
   return 0
 }
 
