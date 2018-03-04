@@ -79,7 +79,7 @@ function spark_common_setup {
       [[ $k =~ executor.jeo.XX.* ]] && category="sparkExecutorXX"
       [[ $k =~ job.* ]] && category="job"
 
-      log_message INFO "spark_common_setup:  $k -> category = $category"
+      log_message DEBUG "spark_common_setup:  $k -> category = $category"
 
       case $category in
           sparkConf)
