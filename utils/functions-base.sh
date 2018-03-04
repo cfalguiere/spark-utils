@@ -187,8 +187,12 @@ function configuration_load_from_file {
   set +u
   while IFS='=' read -r key value
   do
-    log_message DEBUG "key = $key, value = $value"
-    configurationMap[${key}]="${value:-}"
+    log_message DEBUG "configuration_load_from_file: key[0]  ${key[0]:-} "
+    log_message DEBUG "configuration_load_from_file: key##+( )  ${key##+( )} "
+    [[ ! ${key[0]:-} =~ '#' ]] && [[ ! -z ${key##+( )} ]]  && {
+      log_message DEBUG "key = $key, value = $value"
+      configurationMap[${key}]="${value:-}"
+    }
   done < "$configurationPath"
   configurationMap['configurationFile']="$configurationPath"
   set -u

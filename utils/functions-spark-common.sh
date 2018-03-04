@@ -7,7 +7,6 @@
 ### Documentation
 ###
 # -- spark utility functions
-# see example in utils/job.properties
 
 # -- Global variables - always use camelCase
 # -- ---------------------
@@ -18,6 +17,11 @@
 # -- utils/functions-base.sh
 # -- verbosityLevel
 # -- configurationMap
+
+# -- Properties
+# -- ---------------------
+# -- --dry-run : does not submit
+# -- see example in utils/job.properties
 
 ###
 ### End of documentation
@@ -163,7 +167,7 @@ function  spark_common_print_options {
       log_message INFO "  --$k  ${sparkTrailingArgsMap[$k]:-}"
   done
 
-  log_message INFO "$${configurationMap['package']}"
+  log_message INFO "${configurationMap['package']}"
 
 }
 
