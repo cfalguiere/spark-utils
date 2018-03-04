@@ -20,6 +20,7 @@
 # -- jobStatus : exit code
 # -- jobPID : PID of this script
 # -- verbosityLevel : actual verbosity parameter
+# -- configurationMap : configuration properties
 # -- __jobErrosList : list of check and validation errors
 
 ###
@@ -40,7 +41,6 @@ verbosityLevel=${VERBOSITY_LEVEL:-2}
 #echo "DEBUG - verbosityLevel is $verbosityLevel"
 [[ $verbosityLevel -ge 5 ]] && set -xv
 
-declare -a __mapevels
 ERROR=1
 WARN=2
 INFO=3
@@ -52,7 +52,7 @@ function log_message {
   # -- arg 2 : message
   level=$1
   [[ ${!level:-0} =~ [1-4] ]] || echo "unknown log level $1"
-  [[ ${!level} -le $verbosityLevel ]] && echo "$(date) - $1 - $2"
+  [[ ${!level} -le $verbosityLevel ]] && echo "$(date) - $1 - ${2- }"
   return 0
 }
 
@@ -83,8 +83,14 @@ trap "clean_exit" EXIT
 
 log_message INFO "sourcing function-base ..."
 
+
 ###
 ### common functions
+###
+
+
+###
+### error management
 ###
 
 declare __jobErrorsList=()
@@ -109,11 +115,11 @@ function job_print_errors {
 
 function job_break_if_errors {
   # -- exit when there are errors in __jobErrorsList
-  # -- arg1 : status
-  # -- arg2 : message
+  # -- arg1 : exit status
+  # -- arg2 : step name
   [[ $# -ne 2 ]] && log_message WARN "Usage: job_break_if_errors <status> <message>"
   [[ ${#__jobErrorsList[@]} -gt 0 ]] && {
-      log_message ERROR "There were ${#__jobErrorsList[@]} errors at step ${2:-UNDEFINED}"
+      log_message ERROR "There were ${#__jobErrorsList[@]} errors at step ${2:-UNDEFINED}:"
       job_print_errors
       log_message DEBUG "status = $1"
       jobStatus=${1:-1}
@@ -123,7 +129,54 @@ function job_break_if_errors {
 }
 
 function job_get_nb_errors {
+  # -- print out the number of errors
   echo ${#__jobErrorsList[@]}
+}
+
+###
+### configuration
+###
+
+#declare -A configurationMap=()
+declare -a configurationMap=(  )
+
+function configuration_load_from_file {
+  # -- load the configuration file
+  # -- arg1 : file path
+  [[ $# -ne 1 ]] && log_message WARN "Usage: configuration_load_from_file <file_path>"
+  local configurationPath=${1:- }
+  log_message DEBUG "configurationPath = $configurationPath"
+  # -- checks whether the file exists, is readable and not empty
+  [[ -z $configurationPath ]] && job_report_error "configuration file name is empty"
+  [[ ${#__jobErrorsList[@]} -gt 0 ]] && return
+  [[ -f $configurationPath ]] || job_report_error "configuration file was not found at $configurationPath"
+  [[ ${#__jobErrorsList[@]} -gt 0 ]] && return
+  [[ -r $configurationPath ]] || job_report_error "configuration file cannot be read at $configurationPath"
+  [[ ${#__jobErrorsList[@]} -gt 0 ]] && return
+  [[ -s $configurationPath ]] || job_report_error "configuration file  at $configurationPath is empty"
+  [[ ${#__jobErrorsList[@]} -gt 0 ]] && return
+
+  log_message INFO "Loading Configuration map from $configurationPath"
+  set +u
+  while IFS='=' read -r key value
+  do
+    log_message DEBUG "key = $key, value = $value"
+    configurationMap[${key}]="${value:-}"
+  done < "$configurationPath"
+  configurationMap[configurationFile]="$configurationPath"
+  set -u
+  log_message DEBUG "Loading Configuration map from $configurationPath DONE"
+}
+
+function configuration_print_map {
+  log_message DEBUG "configurationMap = $( declare -p configurationMap )"
+  [[ -z "${configurationMap[@]:_}" ]] && log_message INFO "configurationMap is empty" || {
+    log_message INFO "Configuration map content:"
+    for key in "${configurationMap[@]}"
+    do
+      log_message INFO "[$key]: ${configurationMap[$key:- ]}"
+    done
+  }
 }
 
 ###
@@ -131,5 +184,5 @@ function job_get_nb_errors {
 ###
 
 # -- Do not remove
-log_message INFO "sourcing function-base Done"
+log_message INFO "sourcing function-base DONE"
 function_base_loaded=true

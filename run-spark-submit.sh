@@ -15,21 +15,25 @@ source ${scriptDir}/utils/functions-spark-common.sh
 ### Main job
 ###
 
-log_message INFO "test info"
+#configuration_print_map
 
-job_report_error "ceci est une erreur"
-job_report_error "et une autre erreur"
-job_report_error
+configuration_load_from_file config/job.properties
 
-job_print_errors
-log_message DEBUG "There are $( job_get_nb_errors ) errors"
+configuration_print_map
 
-echo "ici"
+job_break_if_errors 11 "configuration checks"
+
+#log_message INFO "test info"
+
+#job_report_error "ceci est une erreur"
+#job_report_error "et une autre erreur"
+#job_report_error
+
+#job_print_errors
 
 job_break_if_errors 12 "parameter checks"
 
-echo "la"
-
+#
 ###
 ### End of Main Job
 ###
