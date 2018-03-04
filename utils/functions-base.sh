@@ -52,7 +52,7 @@ function log_message {
   # -- arg 2 : message
   level=$1
   [[ ${!level:-0} =~ [1-4] ]] || echo "unknown log level $1"
-  [[ ${!level} -le $verbosityLevel ]] && echo "$(date) - $1 - ${2- }"
+  [[ ${!level} -le $verbosityLevel ]] && printf "%s - %-5s - %s\n" "$(date '+%Y-%m-%d %H:%M:%S' )" $1 " ${2- }"
   return 0
 }
 
@@ -68,13 +68,15 @@ jobPID=$$
 function error_exit {
   # -- show the error command location
   log_message ERROR "$@"
-  exit
+  exit $jobStatus
 }
 
 function clean_exit {
   # -- show the error location
   log_message INFO "cleanup on exit"
-  log_message INFO "Exiting with status $jobStatus"
+  [[ $jobStatus -eq 0 ]] && local  statusString="OK"
+  local msg=$(  awk -v code=0 'BEGIN { FS = ";" } ; $1 == code { print $2 }' utils/status-catalog.csv )
+  echo  "${statusString:-KO} - Exiting with status $jobStatus - ${msg:-UNDEFINED}"
   exit $jobStatus
 }
 
@@ -118,6 +120,7 @@ function job_break_if_errors {
   # -- arg1 : exit status
   # -- arg2 : step name
   [[ $# -ne 2 ]] && log_message WARN "Usage: job_break_if_errors <status> <message>"
+  log_message DEBUG "job_break_if_errors for $2 - nb  errors is ${#__jobErrorsList[@]} "
   [[ ${#__jobErrorsList[@]} -gt 0 ]] && {
       log_message ERROR "There were ${#__jobErrorsList[@]} errors at step ${2:-UNDEFINED}:"
       job_print_errors
@@ -126,6 +129,7 @@ function job_break_if_errors {
       log_message DEBUG "jobStatus = $jobStatus"
       error_exit "Too many errors after step ${2:-UNDEFINED_STEP}"
   }
+  return 0
 }
 
 function job_get_nb_errors {
@@ -138,7 +142,7 @@ function job_get_nb_errors {
 ###
 
 #declare -A configurationMap=()
-declare -a configurationMap=(  )
+declare -A configurationMap=(  )
 
 function configuration_load_from_file {
   # -- load the configuration file
@@ -156,27 +160,26 @@ function configuration_load_from_file {
   [[ -s $configurationPath ]] || job_report_error "configuration file  at $configurationPath is empty"
   [[ ${#__jobErrorsList[@]} -gt 0 ]] && return
 
-  log_message INFO "Loading Configuration map from $configurationPath"
+  log_message DEBUG  "Loading Configuration map from $configurationPath ..."
   set +u
   while IFS='=' read -r key value
   do
     log_message DEBUG "key = $key, value = $value"
     configurationMap[${key}]="${value:-}"
   done < "$configurationPath"
-  configurationMap[configurationFile]="$configurationPath"
+  configurationMap['configurationFile']="$configurationPath"
   set -u
-  log_message DEBUG "Loading Configuration map from $configurationPath DONE"
+  log_message INFO "Loading Configuration map from $configurationPath DONE"
 }
 
 function configuration_print_map {
-  log_message DEBUG "configurationMap = $( declare -p configurationMap )"
-  [[ -z "${configurationMap[@]:_}" ]] && log_message INFO "configurationMap is empty" || {
-    log_message INFO "Configuration map content:"
-    for key in "${configurationMap[@]}"
-    do
-      log_message INFO "[$key]: ${configurationMap[$key:- ]}"
-    done
+  local nbValues=${#configurationMap[@]}
+  [[  $nbValues -eq 0 ]] && log_message INFO "configurationMap is empty" || {
+    log_message INFO "Configuration map has $nbValues entries:"
+    log_message INFO "$( declare -p  configurationMap )"
   }
+  log_message DEBUG "end of table"
+  return 0
 }
 
 ###

@@ -3,8 +3,7 @@
 ### build the command line and run a Spark program
 ###
 
-#marche pas sur macOS criptDir=$( dirname $( readlink -f  $0 ))
-scriptDir=$( dirname $0 )
+scriptDir=$( dirname $( readlink -f  $0 ))
 #echo "DEBUG - scriptDir is '$scriptDir'"
 source ${scriptDir}/utils/functions-base.sh
 
@@ -15,10 +14,13 @@ source ${scriptDir}/utils/functions-spark-common.sh
 ### Main job
 ###
 
-#configuration_print_map
+log_message INFO "before loading configuration"
+configuration_print_map
 
+log_message INFO " loading configuration"
 configuration_load_from_file config/job.properties
 
+log_message INFO "after loading configuration"
 configuration_print_map
 
 job_break_if_errors 11 "configuration checks"

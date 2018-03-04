@@ -1,0 +1,7 @@
+code;message
+0;Success
+-1;Undefined error
+11;Configuration error
+21;Wrong parameters
+31;Setup error
+51;Execution error
