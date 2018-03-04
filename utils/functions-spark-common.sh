@@ -20,7 +20,7 @@
 
 # -- Properties
 # -- ---------------------
-# -- --dry-run : does not submit
+# -- --job.dry-run : does not submit
 # -- see example in utils/job.properties
 
 ###
@@ -62,46 +62,64 @@ function spark_common_setup {
   sparkLeadingArgsMap['master']="${configurationMap['master']:-yarn}"
   sparkLeadingArgsMap['deploy-mode']="${configurationMap['deploy-mode']:-cluster}"
 
-  # -- TODO num-executors ...
-
-  log_message DEBUG "spark_common_setup: $( declare -p sparkLeadingArgsMap)"
+  # -- trailing args
+  log_message DEBUG "spark_common_setup:  setting up sparkTrailingArgsMap"
+  sparkTrailingArgsMap['class']="${configurationMap['class']}"
 
   # -- spark. driver. and executor.
   log_message DEBUG "spark_common_setup:  setting up sparkConfMap"
+  local category=""
   for  k in  "${!configurationMap[@]}"
   do
-      [[ $k =~ spark..* ]] && {
-         log_message DEBUG "spark_common_setup: $k is matching spark."
-         sparkConfMap[$k]="${configurationMap[$k]}"
-      }
-      [[ $k =~ driver.jeo.D.* ]] && {
-         log_message DEBUG "spark_common_setup: $k is matching  driver.jeo.D"
-         sparkDriverDExtraMap[${k##driver.jeo.D.}]="${configurationMap[$k]}"
-      }
-      [[ $k =~ driver.jeo.XX.* ]] && {
-         log_message DEBUG "spark_common_setup: $k is matching  driver.jeo.XX"
-         sparkDriverXXExtraMap[${k##driver.jeo.XX.}]="${configurationMap[$k]}"
-      }
-      [[ $k =~ executor.jeo.D.* ]] && {
-         log_message DEBUG "spark_common_setup: $k is matching  executor.jeo.D"
-         sparkExecutorDExtraMap[${k##executor.jeo.D.}]="${configurationMap[$k]}"
-      }
-      [[ $k =~ executor.jeo.XX.* ]] && {
-         log_message DEBUG "spark_common_setup: $k is matching  executor.jeo.XX"
-         sparkExecutorXXExtraMap[${k##executor.jeo.XX.}]="${configurationMap[$k]}"
-      }
+      category=""
+      [[ $k =~ spark..* ]] && category="sparkConf"
+      [[ $k =~ driver.jeo.D.* ]] &&  category="sparkDriverD"
+      [[ $k =~ driver.jeo.XX.* ]] && category="sparkDriverXX"
+      [[ $k =~ executor.jeo.D.* ]] && category="sparkExecutorD"
+      [[ $k =~ executor.jeo.XX.* ]] && category="sparkExecutorXX"
+      [[ $k =~ job.* ]] && category="job"
+
+      log_message INFO "spark_common_setup:  $k -> category = $category"
+
+      case $category in
+          sparkConf)
+               log_message DEBUG "spark_common_setup: $k is matching spark."
+               sparkConfMap[$k]="${configurationMap[$k]}"
+          ;;
+          sparkDriverD)
+               log_message DEBUG "spark_common_setup: $k is matching  driver.jeo.D"
+               sparkDriverDExtraMap[${k##driver.jeo.D.}]="${configurationMap[$k]}"
+          ;;
+          sparkDriverXX)
+               log_message DEBUG "spark_common_setup: $k is matching  driver.jeo.XX"
+               sparkDriverXXExtraMap[${k##driver.jeo.XX.}]="${configurationMap[$k]}"
+          ;;
+          sparkExecutorD)
+               log_message DEBUG "spark_common_setup: $k is matching  executor.jeo.D"
+               sparkExecutorDExtraMap[${k##executor.jeo.D.}]="${configurationMap[$k]}"
+          ;;
+          sparkExecutorXX)
+               log_message DEBUG "spark_common_setup: $k is matching  executor.jeo.XX"
+               sparkExecutorXXExtraMap[${k##executor.jeo.XX.}]="${configurationMap[$k]}"
+          ;;
+          job)
+               log_message DEBUG "spark_common_setup: $k is matching  job."
+               # ignore job. options for spark command line
+          ;;
+          *)
+               log_message DEBUG "spark_common_setup: $k could be another spark option"
+               [[ -z ${sparkLeadingArgsMap+set} ]] && sparkLeadingArgsMap[${k}]="${configurationMap[$k]:-}"
+          ;;
+      esac
+
   done
 
+  log_message DEBUG "spark_common_setup: $( declare -p sparkLeadingArgsMap)"
   log_message DEBUG "spark_common_setup: $( declare -p sparkConfMap)"
   log_message DEBUG "spark_common_setup: $( declare -p sparkDriverDExtraMap)"
   log_message DEBUG "spark_common_setup: $( declare -p sparkDriverXXExtraMap)"
   log_message DEBUG "spark_common_setup: $( declare -p sparkExecutorDExtraMap)"
   log_message DEBUG "spark_common_setup: $( declare -p sparkExecutorXXExtraMap)"
-
-  # -- trailing args
-  log_message DEBUG "spark_common_setup:  setting up sparkTrailingArgsMap"
-  sparkTrailingArgsMap['class']="${configurationMap['class']}"
-
   log_message DEBUG "spark_common_setup: $( declare -p  sparkTrailingArgsMap)"
 }
 
@@ -112,6 +130,7 @@ function spark_common_setup {
 function  spark_common_print_options {
   # -- print content of tables sparkArgsMap, sparkConfMap, sparkDriverExtraMap, sparkExecutorExtraMap
   # -- requires :  verbosityLevel,  sparkArgsMap, sparkConfMap, sparkDriverExtraMap, sparkExecutorExtraMap
+  log_message INFO "Elements of the spark-submit command line:"
 
   # -- leading args
   log_message INFO "From sparkLeadingArgsMap"
@@ -167,7 +186,8 @@ function  spark_common_print_options {
       log_message INFO "  --$k  ${sparkTrailingArgsMap[$k]:-}"
   done
 
-  log_message INFO "${configurationMap['package']}"
+  log_message INFO "${configurationMap['job.package']}"
+  log_message INFO "End of Elements of the spark-submit command line:"
 
 }
 
@@ -232,11 +252,11 @@ function  spark_common_submit {
   done
   log_message DEBUG "spark_common_submit: trailingArgsString -> $trailingArgsString"
 
-  local package="${configurationMap['package']}"
+  local package="${configurationMap['job.package']}"
   log_message DEBUG "spark_common_submit: package -> $package"
 
   # -- run spark-submit
-  local dryRun="${configurationMap['dry-run']+dry}"
+  local dryRun="${configurationMap['job.dry-run']+dry}"
   [[ ${dryRun:-} == "dry" ]]  &&  log_message INFO "dry-run" || {
     set -x
     spark-submit $leadingArgsString $confString --conf spark.driver.extraJavaOptions="$driverJEOString" --conf spark.executor.extraJavaOptions="$executorJEOString"   $trailingArgsString $package $@

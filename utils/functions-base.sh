@@ -194,7 +194,7 @@ function configuration_load_from_file {
       configurationMap[${key}]="${value:-}"
     }
   done < "$configurationPath"
-  configurationMap['configurationFile']="$configurationPath"
+  configurationMap['job.configurationFile']="$configurationPath"
   set -u
   log_message INFO "Loading Configuration map from $configurationPath DONE"
 }
