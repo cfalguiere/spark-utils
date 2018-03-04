@@ -5,7 +5,7 @@
 
 source ${scriptDir}/utils/functions-base.sh
 
-echo "INFO - sourcing function-spark-common ..."
+log_message INFO "sourcing function-spark-common ..."
 
 ###
 ### Spark utils functions
@@ -17,5 +17,5 @@ echo "INFO - sourcing function-spark-common ..."
 ###
 
 # -- Do not remove
-echo "INFO - sourcing function-spark-common Done"
+log_message INFO "sourcing function-spark-common Done"
 function_spark_common_source_loaded=true
