@@ -4,4 +4,7 @@ code;message
 11;Installation error
 21;Wrong configuration
 31;Setup error
-51;Execution error
+41:Validation error
+51;PreProcessing error
+61;Processing error
+71:PostProcessing error

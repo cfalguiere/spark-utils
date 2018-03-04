@@ -30,7 +30,14 @@ configuration_print_map
 # -- asserting required configuration are present
 declare -a requiredConfigurationKeys=( "name" ) # Example
 configuration_assert_provided "$requiredConfigurationKeys"
-job_break_if_errors 21 "command line arguments"
+job_break_if_errors 21 "job configuration"
+
+# -- prepare t
+
+spark_common_setup
+spark_common_print_options
+
+spark_common_submit "arg1" "arg2"
 
 ###
 ### End of Main Job

@@ -22,7 +22,7 @@
 # -- jobPID : PID of this script
 # -- verbosityLevel : actual verbosity parameter
 # -- configurationMap : configuration properties
-# -- __jobErrosList : list of check and validation errors
+# -- __jobErrorsList : list of check and validation errors
 
 ###
 ### End of documentation
@@ -82,6 +82,7 @@ log_header
 
 function error_exit {
   # -- show the error command location
+  [[ $verbosityLevel -ge 5 ]] && set -xv || set +x
   log_message ERROR "$@"
   exit $jobStatus
 }
